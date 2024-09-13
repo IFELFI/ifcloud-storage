@@ -1,4 +1,4 @@
-use super::store;
+pub mod store;
 
 #[derive(Clone)]
 pub struct Session<S> {
