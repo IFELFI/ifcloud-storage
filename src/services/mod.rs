@@ -1,5 +1,6 @@
 pub mod auth_service;
 pub mod session;
+pub mod store;
 
 pub struct Services {
     service: Vec<Box<dyn Service>>,

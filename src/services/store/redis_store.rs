@@ -1,11 +1,17 @@
 use async_trait::async_trait;
 use redis::{aio::MultiplexedConnection, AsyncCommands, Client, RedisResult};
+use crate::services::session::SessionStore;
 
-use super::Store;
 
 #[derive(Clone)]
 pub struct RedisStore {
     client: redis::Client,
+}
+
+#[derive(thiserror::Error, Debug)]
+pub enum RedisStoreError {
+    #[error(transparent)]
+    Redis(#[from] fred::error::RedisError),
 }
 
 #[allow(dead_code)]
@@ -21,7 +27,7 @@ impl RedisStore {
 }
 
 #[async_trait]
-impl Store for RedisStore {
+impl SessionStore for RedisStore {
     async fn save(&self, key: String, value: String) -> Result<(), String> {
         let mut con: MultiplexedConnection = match __self.connection().await {
             Ok(con) => con,

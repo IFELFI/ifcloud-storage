@@ -1,4 +1,4 @@
-pub mod store;
+use async_trait::async_trait;
 
 #[derive(Clone)]
 pub struct Session<S> {
@@ -9,7 +9,7 @@ pub struct Session<S> {
 #[allow(dead_code)]
 impl<S> Session<S>
 where
-    S: store::Store,
+    S: SessionStore,
 {
     pub fn new(store: S, prefix: Option<String>) -> Session<S> {
         let prefix = prefix.unwrap_or("".to_string());
@@ -30,4 +30,11 @@ where
         let formatted_key = format!("{}{}", self.prefix, key);
         self.store.delete(formatted_key).await
     }
+}
+
+#[async_trait]
+pub trait SessionStore {
+    async fn save(&self, key: String, value: String) -> Result<(), String>;
+    async fn get(&self, key: String) -> Result<Option<String>, String>;
+    async fn delete(&self, key: String) -> Result<(), String>;
 }

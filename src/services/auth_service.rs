@@ -1,8 +1,6 @@
-use super::{
-    session::{store::redis_store::RedisStore, Session},
-    Service,
-};
 use async_trait::async_trait;
+
+use super::{session::Session, store::redis_store::RedisStore, Service};
 
 #[async_trait]
 #[allow(dead_code)]
