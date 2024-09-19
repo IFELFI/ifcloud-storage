@@ -1,18 +1,21 @@
-use crate::services::auth_service::{AuthService, Authentication};
-use crate::services::session::store::redis_store::RedisStore;
+use anyhow::Result;
+use axum::{body::Body, extract::Path, response::Response};
+use tower_sessions::Session;
 
-pub async fn read(key: String) -> String {
-    let store = RedisStore::new("redis://127.0.0.1:6379");
-    let session = AuthService::new("auth".to_string(), store);
-    let result = session.verify_session(&key).await;
-    match result {
-        Ok(value) => {
-            if value {
-                "Session is valid".to_string()
-            } else {
-                "Session is invalid".to_string()
-            }
-        }
-        Err(value) => value,
-    }
+use crate::{
+    routes::{AppError, BodyBuilder, ResponseBody},
+    services::{file_key_service::FileKey, FileKeyService},
+};
+
+pub async fn read(
+    Path(file_key): Path<String>,
+    session: Session,
+) -> Result<Response<Body>, AppError> {
+    let is_available = FileKeyService.is_available_key(&session, file_key).await?;
+
+    let body = ResponseBody::new(format!("file_key: {}", is_available)).build_body();
+
+    let response = Response::builder().status(200).body(body).unwrap();
+
+    Ok(response)
 }
