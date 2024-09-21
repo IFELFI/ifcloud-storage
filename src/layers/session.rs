@@ -1,17 +1,20 @@
+use std::env;
+
 use anyhow::Result;
 use tower_sessions::{
-    cookie::{time::Duration, Key, SameSite},
+    cookie::{time::Duration, Key},
     service::PrivateCookie,
     Expiry, SessionManagerLayer,
 };
 use tower_sessions_redis_store::{
-    fred::prelude::{ClientLike, RedisClient},
+    fred::{prelude::{ClientLike, RedisClient}, types::RedisConfig},
     RedisStore,
 };
 
 pub async fn set_session_layer(
 ) -> Result<SessionManagerLayer<RedisStore<RedisClient>, PrivateCookie>> {
-    let client = RedisClient::default();
+    let addr = env::var("SESSION_STORAGE_URL").unwrap_or("redis://127.0.0.1:6379".to_string());
+    let client = RedisClient::new(RedisConfig::from_url(&addr)?, None, None, None);
     client.init().await?;
 
     let cookie_secret = Key::generate();

@@ -3,10 +3,14 @@ use axum::{
     routing::{get, post},
     Router,
 };
+use dotenv::dotenv;
 use routes::issue::issue_session;
 use serde::Deserialize;
-use services::file_manager_service::ModifyFile;
-use std::net::SocketAddr;
+use services::{file_manager_service::ModifyFile, FileManagerService};
+use std::{
+    env,
+    net::{IpAddr, SocketAddr},
+};
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::TcpListener,
@@ -18,6 +22,9 @@ mod services;
 
 #[tokio::main]
 async fn main() {
+    // load .env file
+    dotenv().ok();
+
     let session_layer = layers::set_session_layer().await.unwrap();
 
     let index_routes = Router::new().route("/", get(|| async { "Hello, world!" }));
@@ -34,13 +41,24 @@ async fn main() {
         .nest("/session", issue_session_routes)
         .layer(session_layer);
 
-    let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
+    let addr = SocketAddr::from((
+        env::var("HOST")
+            .unwrap_or("127.0.0.1".to_string())
+            .parse::<IpAddr>()
+            .unwrap(),
+        env::var("PORT")
+            .unwrap_or("3000".to_string())
+            .parse::<u16>()
+            .unwrap(),
+    ));
     let server = TcpListener::bind(&addr).await.unwrap();
 
     // serve microservice
+    println!("Microservice is running on http://{}", addr);
     tokio::spawn(microservice());
 
     // serve axum
+    println!("Axum is running on http://{}", addr);
     axum::serve(server, router).await.unwrap();
 }
 
@@ -67,12 +85,20 @@ enum MicroRequestData {
 #[allow(dead_code)]
 struct MicroRequest {
     cmd: String,
-    // data: MergeRequestData | DeleteRequestData
     data: MicroRequestData,
 }
 
 async fn microservice() -> Result<()> {
-    let addr = SocketAddr::from(([127, 0, 0, 1], 3001));
+    let addr = SocketAddr::from((
+        env::var("MICRO_HOST")
+            .unwrap_or("127.0.0.1".to_string())
+            .parse::<IpAddr>()
+            .unwrap(),
+        env::var("MICRO_PORT")
+            .unwrap_or("3001".to_string())
+            .parse::<u16>()
+            .unwrap(),
+    ));
     let server = TcpListener::bind(&addr).await?;
 
     loop {
@@ -92,9 +118,9 @@ async fn microservice() -> Result<()> {
                     }
                 };
 
-                // handle request
-                if n.cmd == "merge" { // merge all chunks into one file
-                    let file_manager = services::file_manager_service::FileManagerService;
+                // merge all chunks into one file
+                if n.cmd == "merge" {
+                    let file_manager = FileManagerService;
                     let merge_data: Result<MergeRequestData> = match n.data {
                         MicroRequestData::Merge(data) => Ok(data),
                         _ => Err(anyhow::anyhow!("data is not MergeRequestData")),
@@ -104,7 +130,9 @@ async fn microservice() -> Result<()> {
                         .merge(&merge_data.file_key, merge_data.total_chunk)
                         .await
                         .unwrap();
-                } else if n.cmd == "delete" { // delete all chunks and the directory
+
+                // delete all chunks and the directory
+                } else if n.cmd == "delete" {
                     let file_manager = services::file_manager_service::FileManagerService;
                     let delete_data: Result<DeleteRequestData> = match n.data {
                         MicroRequestData::Delete(data) => Ok(data),

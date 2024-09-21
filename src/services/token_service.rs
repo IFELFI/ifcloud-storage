@@ -17,8 +17,8 @@ pub trait Token {
 
 #[allow(dead_code)]
 impl TokenService {
-    pub async fn new(url: Option<&str>) -> RedisResult<Self> {
-        let client = Client::open(url.unwrap_or("redis://127.0.0.1/"))?;
+    pub async fn new(url: &str) -> RedisResult<Self> {
+        let client = Client::open(url)?;
         let connection = client
             .get_multiplexed_tokio_connection_with_response_timeouts(
                 Duration::from_secs(10),

@@ -48,7 +48,8 @@ pub async fn issue_session(
     Path(token): Path<String>,
     session: Session,
 ) -> Result<Response<Body>, AppError> {
-    let token_service = TokenService::new(Some("redis://127.0.0.1:6666")).await?;
+    let redis_url = std::env::var("TOKEN_STORAGE_URL").unwrap_or("redis://127.0.0.1:6666".to_string());
+    let token_service = TokenService::new(&redis_url).await?;
     let route = SessionIssueRoute::new(token_service);
 
     route.new_session(Path(token), &session).await
