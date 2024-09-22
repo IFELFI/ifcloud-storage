@@ -1,3 +1,4 @@
+use amiquip::{Connection, ConsumerMessage, ConsumerOptions, Exchange, QueueDeclareOptions};
 use anyhow::Result;
 use axum::{
     routing::{get, post},
@@ -54,8 +55,11 @@ async fn main() {
     let server = TcpListener::bind(&addr).await.unwrap();
 
     // serve microservice
-    println!("Microservice is running on http://{}", addr);
-    tokio::spawn(microservice());
+    //println!("Microservice is running on http://{}", addr);
+    //tokio::spawn(microservice());
+
+    // serve rabbit
+    tokio::spawn(rabbit());
 
     // serve axum
     println!("Axum is running on http://{}", addr);
@@ -149,4 +153,31 @@ async fn microservice() -> Result<()> {
             }
         });
     }
+}
+
+async fn rabbit() -> Result<()> {
+    let mut connection = Connection::insecure_open("amqp://guest:guest@localhost:5672")?;
+
+    let channel = connection.open_channel(None)?;
+
+    let queue = channel.queue_declare("storage", QueueDeclareOptions::default())?;
+
+    let consumer = queue.consume(ConsumerOptions::default())?;
+
+    for (i, message) in consumer.receiver().iter().enumerate() {
+        match message {
+            ConsumerMessage::Delivery(delivery) => {
+                let body = std::str::from_utf8(&delivery.body)?;
+                println!("({:>3}) Received [{}]", i, body);
+                consumer.ack(delivery)?;
+            }
+            other => {
+                println!("Consumer ended: {:?}", other);
+                break;
+            }
+        }
+    }
+
+    let _ = connection.close();
+    Ok(())
 }
