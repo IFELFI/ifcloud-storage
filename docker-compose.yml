@@ -35,6 +35,22 @@ services:
     networks:
       - ifcloud-network
 
+  rabbitmq:
+    container_name: rabbitmq
+    image: rabbitmq:3-management-alpine
+    restart: unless-stopped
+    volumes:
+      - ./.docker/rabbitmq/etc/:/etc/rabbitmq/
+      - ./.docker/rabbitmq/data/:/var/lib/rabbitmq/
+      - ./.docker/rabbitmq/logs/:/var/log/rabbitmq/
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - ifcloud-network
+    env_file:
+      - rabbit.env
+
 networks:
   ifcloud-network:
     name: ifcloud-network
