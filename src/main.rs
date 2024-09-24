@@ -1,10 +1,16 @@
-use amiquip::{Connection, ConsumerMessage, ConsumerOptions, Exchange, QueueDeclareOptions};
 use anyhow::Result;
 use axum::{
     routing::{get, post},
     Router,
 };
 use dotenv::dotenv;
+use futures::{stream::Next, StreamExt};
+use lapin::{
+    message::DeliveryResult,
+    options::{BasicAckOptions, BasicConsumeOptions, QueueDeclareOptions},
+    types::FieldTable,
+    Connection, ConnectionProperties,
+};
 use routes::issue::issue_session;
 use serde::Deserialize;
 use services::{file_manager_service::ModifyFile, FileManagerService};
@@ -109,44 +115,44 @@ struct RabbitResponse {
 }
 
 async fn rabbit() -> Result<()> {
-    let mut connection = Connection::insecure_open("amqp://guest:guest@localhost:5672")?;
+    let addr = env::var("RABBIT_ADDR").unwrap_or_else(|_| "amqp://localhost:5672".to_string());
+    let options = ConnectionProperties::default()
+        .with_executor(tokio_executor_trait::Tokio::current())
+        .with_reactor(tokio_reactor_trait::Tokio);
 
-    let channel = connection.open_channel(None)?;
+    let connection = Connection::connect(&addr, options).await?;
+    let channel = connection.create_channel().await?;
 
-    let queue = channel.queue_declare("storage_queue", QueueDeclareOptions::default())?;
+    let _queue = channel.queue_declare(
+        "storage",
+        QueueDeclareOptions::default(),
+        FieldTable::default(),
+    );
 
-    let consumer = queue.consume(ConsumerOptions::default())?;
+    let consumer = channel
+        .basic_consume(
+            "storage",
+            "storage",
+            BasicConsumeOptions::default(),
+            FieldTable::default(),
+        )
+        .await?;
 
-    for (i, message) in consumer.receiver().iter().enumerate() {
-        match message {
-            ConsumerMessage::Delivery(delivery) => {
-                let body = std::str::from_utf8(&delivery.body)?;
-                let json: Option<MicroRequest> = serde_json::from_str(body).ok();
-
-                match json {
-                    Some(data) => match data.pattern.cmd.as_str() {
-                        "delete" => {
-                            let delete_data = match data.data {
-                                MicroRequestData::Delete(delete_data) => delete_data,
-                                _ => {
-                                    println!("Invalid data");
-                                    continue;
-                                }
-                            };
-                        }
-                        _ => {}
-                    },
-                    None => {
-                    }
-                }
+    consumer.set_delegate(move |delivery: DeliveryResult| async move {
+        let delivery = match delivery {
+            Ok(Some(delivery)) => delivery,
+            Ok(None) => return,
+            Err(error) => {
+                dbg!("Failed to consume queue message {}", error);
+                return;
             }
-            other => {
-                println!("Consumer ended: {:?}", other);
-                break;
-            }
-        }
-    }
+        };
 
-    let _ = connection.close();
+        delivery
+            .ack(BasicAckOptions::default())
+            .await
+            .expect("Failed to act send_webhook_event message");
+    });
+
     Ok(())
 }
