@@ -86,73 +86,26 @@ enum MicroRequestData {
 }
 
 #[derive(Deserialize)]
+struct RequestPattern {
+    target: String,
+    cmd: String,
+}
+
+#[derive(Deserialize)]
 #[allow(dead_code)]
 struct MicroRequest {
-    cmd: String,
+    pattern: RequestPattern,
     data: MicroRequestData,
 }
 
-async fn microservice() -> Result<()> {
-    let addr = SocketAddr::from((
-        env::var("MICRO_HOST")
-            .unwrap_or("127.0.0.1".to_string())
-            .parse::<IpAddr>()
-            .unwrap(),
-        env::var("MICRO_PORT")
-            .unwrap_or("3001".to_string())
-            .parse::<u16>()
-            .unwrap(),
-    ));
-    let server = TcpListener::bind(&addr).await?;
+enum RabbitResponseStatus {
+    Success,
+    Fail,
+}
 
-    loop {
-        let (mut socket, _) = server.accept().await?;
-        tokio::spawn(async move {
-            let mut buf = [0; 1024];
-            loop {
-                let n: MicroRequest = match socket.read(&mut buf).await {
-                    Ok(n) if n == 0 => return,
-                    Ok(n) => {
-                        let json: MicroRequest = serde_json::from_slice(&buf[..n]).unwrap();
-                        json
-                    }
-                    Err(e) => {
-                        eprintln!("failed to read from socket; err = {:?}", e);
-                        return;
-                    }
-                };
-
-                // merge all chunks into one file
-                if n.cmd == "merge" {
-                    let file_manager = FileManagerService;
-                    let merge_data: Result<MergeRequestData> = match n.data {
-                        MicroRequestData::Merge(data) => Ok(data),
-                        _ => Err(anyhow::anyhow!("data is not MergeRequestData")),
-                    };
-                    let merge_data = merge_data.unwrap();
-                    file_manager
-                        .merge(&merge_data.file_key, merge_data.total_chunk)
-                        .await
-                        .unwrap();
-
-                // delete all chunks and the directory
-                } else if n.cmd == "delete" {
-                    let file_manager = services::file_manager_service::FileManagerService;
-                    let delete_data: Result<DeleteRequestData> = match n.data {
-                        MicroRequestData::Delete(data) => Ok(data),
-                        _ => Err(anyhow::anyhow!("data is not DeleteRequestData")),
-                    };
-                    let delete_data = delete_data.unwrap();
-                    file_manager.delete(&delete_data.file_key).await.unwrap();
-                }
-
-                if let Err(e) = socket.write_all(n.cmd.as_bytes()).await {
-                    eprintln!("failed to write to socket; err = {:?}", e);
-                    return;
-                }
-            }
-        });
-    }
+struct RabbitResponse {
+    status: RabbitResponseStatus,
+    message: String,
 }
 
 async fn rabbit() -> Result<()> {
@@ -160,7 +113,7 @@ async fn rabbit() -> Result<()> {
 
     let channel = connection.open_channel(None)?;
 
-    let queue = channel.queue_declare("storage", QueueDeclareOptions::default())?;
+    let queue = channel.queue_declare("storage_queue", QueueDeclareOptions::default())?;
 
     let consumer = queue.consume(ConsumerOptions::default())?;
 
@@ -168,8 +121,24 @@ async fn rabbit() -> Result<()> {
         match message {
             ConsumerMessage::Delivery(delivery) => {
                 let body = std::str::from_utf8(&delivery.body)?;
-                println!("({:>3}) Received [{}]", i, body);
-                consumer.ack(delivery)?;
+                let json: Option<MicroRequest> = serde_json::from_str(body).ok();
+
+                match json {
+                    Some(data) => match data.pattern.cmd.as_str() {
+                        "delete" => {
+                            let delete_data = match data.data {
+                                MicroRequestData::Delete(delete_data) => delete_data,
+                                _ => {
+                                    println!("Invalid data");
+                                    continue;
+                                }
+                            };
+                        }
+                        _ => {}
+                    },
+                    None => {
+                    }
+                }
             }
             other => {
                 println!("Consumer ended: {:?}", other);
