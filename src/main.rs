@@ -1,3 +1,4 @@
+use anyhow::Result;
 use axum::{
     routing::{get, post},
     Router,
@@ -51,3 +52,25 @@ async fn main() {
     println!("Axum is running on http://{}", addr);
     axum::serve(server, router).await.unwrap();
 }
+
+pub struct StoargeRPCServer {}
+
+impl StoargeRPCServer {
+    async fn build(&self) {
+
+    }
+}
+
+#[tonic::async_trait]
+trait StorageService {
+    async fn merge(&self);
+    async fn delete(&self);
+}
+
+#[tonic::async_trait]
+impl StorageService for StoargeRPCServer {
+    async fn merge(&self) {}
+
+    async fn delete(&self) {}
+}
+

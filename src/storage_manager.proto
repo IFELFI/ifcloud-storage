@@ -1,0 +1,12 @@
+syntax = "proto3"
+package storage_manager;
+
+service StorageManager {
+  rpc Manage (ManageRequest) return (ManageResponse);
+}
+
+message ManageRequest {
+}
+
+message ManageResponse {
+}
