@@ -3,6 +3,14 @@ name = "ifcloud-storage"
 version = "0.1.0"
 edition = "2021"
 
+[[bin]]
+name = "rest-server"
+path = "src/main.rs"
+
+[[bin]]
+name = "rpc-server"
+path = "src/rpc.rs"
+
 [dependencies]
 axum = { version = "0.7.5", features = ["multipart"] }
 tokio = { version = "1", features = ["full"] }
@@ -18,3 +26,7 @@ redis = { version = "0.27.0", features = ["tokio-comp"] }
 dotenv = "0.15.0"
 futures = "0.3.30"
 tonic = "0.12.2"
+prost = "0.13.3"
+
+[build-dependencies]
+tonic-build = "0.12"

@@ -1,0 +1,20 @@
+syntax = "proto3";
+package storage_manager;
+
+service StorageManage {
+  rpc Merge (MergeRequest) returns (StorageManageResponse);
+  rpc Delete (DeleteRequest) returns (StorageManageResponse);
+}
+
+message MergeRequest {
+  string file_key = 1;
+  int32 total_chunk_count = 2;
+}
+
+message DeleteRequest {
+  string file_key = 1;
+}
+
+message StorageManageResponse {
+  string message = 1;
+}
