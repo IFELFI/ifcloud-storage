@@ -16,7 +16,6 @@ services:
     depends_on:
       - token
       - session
-      - rabbit  
 
   token:
     container_name: token
@@ -35,22 +34,6 @@ services:
       - "6379:6379"
     networks:
       - ifcloud-network
-
-  rabbit:
-    container_name: rabbit
-    image: rabbitmq:3-management-alpine
-    restart: unless-stopped
-    # volumes:
-    #   - ./.docker/rabbitmq/etc/:/etc/rabbitmq/
-    #   - ./.docker/rabbitmq/data/:/var/lib/rabbitmq/
-    #   - ./.docker/rabbitmq/logs/:/var/log/rabbitmq/
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-    networks:
-      - ifcloud-network
-    # env_file:
-    #   - rabbit.env
 
 networks:
   ifcloud-network:

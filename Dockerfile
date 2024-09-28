@@ -12,10 +12,15 @@ COPY --from=planner /app/recipe.json recipe.json
 # Notice that we are specifying the --target flag!
 RUN cargo chef cook --release --target x86_64-unknown-linux-musl --recipe-path recipe.json
 COPY . .
-RUN cargo build --release --target x86_64-unknown-linux-musl --bin ifcloud-storage
+RUN cargo build --release --target x86_64-unknown-linux-musl
 
 FROM alpine AS runtime
-RUN addgroup -S myuser && adduser -S myuser -G myuser
-COPY --from=builder /app/target/x86_64-unknown-linux-musl/release/ifcloud-storage /app/.env /usr/local/bin/
+RUN addgroup -S myuser \
+  && adduser -S myuser -G myuser \
+  && apk add protoc protobuf-dev 
+COPY --from=builder /app/target/x86_64-unknown-linux-musl/release/runner \
+  /app/.env \
+  /usr/local/bin/
+
 USER myuser
-CMD ["/usr/local/bin/ifcloud-storage"]
+CMD ["/usr/local/bin/runner"]

@@ -1,32 +1,6 @@
-[package]
-name = "ifcloud-storage"
-version = "0.1.0"
-edition = "2021"
-
-[[bin]]
-name = "rest-server"
-path = "src/main.rs"
-
-[[bin]]
-name = "rpc-server"
-path = "src/rpc.rs"
-
-[dependencies]
-axum = { version = "0.7.5", features = ["multipart"] }
-tokio = { version = "1", features = ["full"] }
-tower-sessions = { version = "0.13.0", features = ["private"] }
-tower-sessions-redis-store = "0.14.0"
-async-trait = "0.1.82"
-thiserror = "1.0.63"
-anyhow = "1.0.88"
-serde = "1.0.210"
-serde_json = "1.0.128"
-tower = "0.5.1"
-redis = { version = "0.27.0", features = ["tokio-comp"] }
-dotenv = "0.15.0"
-futures = "0.3.30"
-tonic = "0.12.2"
-prost = "0.13.3"
-
-[build-dependencies]
-tonic-build = "0.12"
+[workspace]
+members = [
+    "storage-manager",
+    "file-uploader", 
+    "runner"
+]

@@ -1,9 +1,7 @@
-use anyhow::Result;
 use axum::{
     routing::{get, post},
     Router,
 };
-use dotenv::dotenv;
 use routes::issue::issue_session;
 use std::{
     env,
@@ -15,11 +13,8 @@ mod layers;
 mod routes;
 mod services;
 
-#[tokio::main]
-async fn main() {
-    // load .env file
-    dotenv().ok();
-
+//#[tokio::main]
+pub async fn run() {
     let session_layer = layers::set_session_layer().await.unwrap();
 
     let index_routes = Router::new().route("/", get(|| async { "Hello, world!" }));
@@ -49,6 +44,6 @@ async fn main() {
     let server = TcpListener::bind(&addr).await.unwrap();
 
     // serve axum
-    println!("Axum is running on http://{}", addr);
+    println!("REST server is running on http://{}", addr);
     axum::serve(server, router).await.unwrap();
 }

@@ -1,0 +1,12 @@
+[package]
+name = "storage-manager"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tokio = { version = "1.40.0", features = ["full"] }
+prost = "0.13.3"
+tonic = "0.12.3"
+
+[build-dependencies]
+tonic-build = "0.12.3"
