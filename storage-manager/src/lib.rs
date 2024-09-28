@@ -1,10 +1,13 @@
 use std::env;
 use std::net::{IpAddr, SocketAddr};
 
+use services::ManageFileService;
 use tonic::{transport::Server, Request, Response, Status};
 
 use storage_manager::storage_manage_server::{StorageManage, StorageManageServer};
 use storage_manager::{DeleteRequest, MergeRequest, StorageManageReply};
+
+mod services;
 
 pub mod storage_manager {
     tonic::include_proto!("storage_manager");
@@ -20,6 +23,13 @@ impl StorageManage for StorageManageService {
         request: Request<MergeRequest>,
     ) -> Result<Response<StorageManageReply>, Status> {
         println!("Got a request from {:?}", request.remote_addr());
+
+        let file_key = &request.get_ref().file_key;
+        let total_chunk_count = request.get_ref().total_chunk_count;
+
+        ManageFileService::merge_chunks(file_key, total_chunk_count)
+            .await
+            .unwrap();
         let reply = storage_manager::StorageManageReply {
             message: "File merged successfully".to_string(),
         };
@@ -32,6 +42,10 @@ impl StorageManage for StorageManageService {
         request: Request<DeleteRequest>,
     ) -> Result<Response<StorageManageReply>, Status> {
         println!("Got a request from {:?}", request.remote_addr());
+
+        let file_key = &request.get_ref().file_key;
+
+        ManageFileService::delete_file(file_key).await.unwrap();
         let reply = storage_manager::StorageManageReply {
             message: "File deleted successfully".to_string(),
         };
@@ -40,7 +54,6 @@ impl StorageManage for StorageManageService {
     }
 }
 
-//#[tokio::main]
 pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
     let addr = SocketAddr::from((
         env::var("RPC_HOST")

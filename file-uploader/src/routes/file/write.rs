@@ -8,7 +8,7 @@ use tower_sessions::Session;
 
 use crate::{
     routes::{AppError, BodyBuilder, ResponseBody},
-    services::{file_key_service::FileKey, FileKeyService},
+    services::{session_manager::SessionManagerService, SessionManager},
 };
 
 pub async fn write(
@@ -17,7 +17,7 @@ pub async fn write(
     mut multipart: Multipart,
 ) -> Result<Response<Body>, AppError> {
     // check file_key is available
-    let is_available = FileKeyService.is_available_key(&session, &file_key).await?;
+    let is_available = SessionManager.is_available_key(&session, &file_key).await?;
 
     // check file_key is available
     if !is_available {

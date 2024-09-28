@@ -1,22 +1,17 @@
 use std::time::Duration;
 
-use async_trait::async_trait;
 use redis::{Client, RedisResult};
 
-#[allow(dead_code)]
-pub struct TokenService {
+pub struct TokenManager {
     client: Client,
     connection: redis::aio::MultiplexedConnection,
 }
 
-#[async_trait]
-#[allow(dead_code)]
-pub trait Token {
+pub trait TokenManagerService {
     async fn get_file_key(&self, token: &str) -> RedisResult<String>;
 }
 
-#[allow(dead_code)]
-impl TokenService {
+impl TokenManager {
     pub async fn new(url: &str) -> RedisResult<Self> {
         let client = Client::open(url)?;
         let connection = client
@@ -29,8 +24,7 @@ impl TokenService {
     }
 }
 
-#[async_trait]
-impl Token for TokenService {
+impl TokenManagerService for TokenManager {
     async fn get_file_key(&self, token: &str) -> RedisResult<String> {
         let mut con = self.connection.clone();
         let value: String = redis::cmd("GET").arg(&token).query_async(&mut con).await?;

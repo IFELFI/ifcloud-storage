@@ -1,7 +1,5 @@
-pub mod file_key_service;
-pub mod token_service;
-pub mod file_manager_service;
+pub mod session_manager;
+pub mod token_manager;
 
-pub use file_key_service::FileKeyService;
-pub use token_service::TokenService;
-pub use file_manager_service::FileManagerService;
+pub use session_manager::SessionManager;
+pub use token_manager::TokenManager;

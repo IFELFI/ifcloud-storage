@@ -2,7 +2,7 @@ use axum::{
     routing::{get, post},
     Router,
 };
-use routes::issue::issue_session;
+use routes::session::issue_session;
 use std::{
     env,
     net::{IpAddr, SocketAddr},

@@ -1,10 +1,5 @@
 syntax = "proto3";
 
-option java_multiple_files = true;
-option java_package = "io.grpc.examples.storagemanager";
-option java_outer_classname = "StorageManagerProto";
-
-
 package storage_manager;
 
 service StorageManage {
@@ -14,7 +9,7 @@ service StorageManage {
 
 message MergeRequest {
   string file_key = 1;
-  string total_chunk_count = 2;
+  uint32 total_chunk_count = 2;
 }
 
 message DeleteRequest {
