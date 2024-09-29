@@ -22,12 +22,13 @@ impl StorageManage for StorageManageService {
         &self,
         request: Request<MergeRequest>,
     ) -> Result<Response<StorageManageReply>, Status> {
-        println!("Got a request from {:?}", request.remote_addr());
+        println!("request: {:?}", request);
 
-        let file_key = &request.get_ref().file_key;
-        let total_chunk_count = request.get_ref().total_chunk_count;
+        let request = request.into_inner();
+        let file_key = request.file_key;
+        let total_chunk_count = request.total_chunk_count;
 
-        ManageFileService::merge_chunks(file_key, total_chunk_count)
+        ManageFileService::merge_chunks(&file_key, total_chunk_count)
             .await
             .unwrap();
         let reply = storage_manager::StorageManageReply {
