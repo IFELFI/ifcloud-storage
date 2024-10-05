@@ -3,7 +3,7 @@ use std::time::Duration;
 use redis::{Client, RedisResult};
 
 pub struct TokenManager {
-    client: Client,
+    //client: Client,
     connection: redis::aio::MultiplexedConnection,
 }
 
@@ -20,7 +20,7 @@ impl TokenManager {
                 Duration::from_secs(10),
             )
             .await?;
-        Ok(Self { client, connection })
+        Ok(Self { connection })
     }
 }
 

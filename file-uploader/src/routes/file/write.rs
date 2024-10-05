@@ -1,3 +1,5 @@
+use std::env;
+
 use anyhow::Result;
 use axum::{
     body::{Body, Bytes},
@@ -34,15 +36,20 @@ pub async fn write(
 
     while let Some(field) = multipart.next_field().await.unwrap() {
         let name = field.name().unwrap().to_string();
-        if name == "chunkCount" {
-            chunk_count = field.text().await?.parse::<u32>()?;
-        } else if name == "fileData" {
-            file_data = field.bytes().await?;
+        match name.as_str() {
+            "chunkCount" => {
+                chunk_count = field.text().await?.parse::<u32>()?;
+            }
+            "fileData" => {
+                file_data = field.bytes().await?;
+            }
+            _ => {}
         }
     }
 
     // create folder if not exist
-    let dir_path = format!("./storage/{}", &file_key);
+    let storage_path = env::var("BASE_STORAGE_PATH").unwrap_or("./storage".to_string());
+    let dir_path = format!("{}/{}", &storage_path, &file_key);
     tokio::fs::create_dir_all(&dir_path).await?;
     // write fileData to file
     let file_path = format!("{}/{}", &dir_path, chunk_count);

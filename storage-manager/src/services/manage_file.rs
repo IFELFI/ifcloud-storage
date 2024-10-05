@@ -1,3 +1,5 @@
+use std::env;
+
 use anyhow::Result;
 use tokio::{
     fs::File,
@@ -8,14 +10,16 @@ pub struct ManageFileService;
 
 impl ManageFileService {
     pub async fn delete_file(file_key: &String) -> Result<()> {
-        let file_dir_path = format!("./storage/{}", file_key);
+        let storage_path = env::var("BASE_STORAGE_PATH").unwrap_or("./storage".to_string());
+        let file_dir_path = format!("{}/{}", storage_path, file_key);
         tokio::fs::remove_dir_all(file_dir_path).await?;
 
         Ok(())
     }
 
     pub async fn merge_chunks(file_key: &String, total_chunk_count: u32) -> Result<()> {
-        let file_dir_path = format!("./storage/{}", file_key);
+        let storage_path = env::var("BASE_STORAGE_PATH").unwrap_or("./storage".to_string());
+        let file_dir_path = format!("{}/{}", storage_path, file_key);
         let file_path = format!("{}{}", file_dir_path, "original");
 
         let mut file = tokio::fs::OpenOptions::new()

@@ -87,3 +87,4 @@ pub async fn issue_session(
 
     route.new_session(Path(token), &session).await
 }
+
