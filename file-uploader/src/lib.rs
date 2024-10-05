@@ -2,16 +2,19 @@ use axum::{
     routing::{get, post},
     Router,
 };
-use routes::issue::issue_session;
-use std::net::SocketAddr;
+use routes::session::issue_session;
+use std::{
+    env,
+    net::{IpAddr, SocketAddr},
+};
 use tokio::net::TcpListener;
 
 mod layers;
 mod routes;
 mod services;
 
-#[tokio::main]
-async fn main() {
+//#[tokio::main]
+pub async fn run() {
     let session_layer = layers::set_session_layer().await.unwrap();
 
     let index_routes = Router::new().route("/", get(|| async { "Hello, world!" }));
@@ -28,8 +31,19 @@ async fn main() {
         .nest("/session", issue_session_routes)
         .layer(session_layer);
 
-    let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
-    let tcp = TcpListener::bind(&addr).await.unwrap();
+    let addr = SocketAddr::from((
+        env::var("HOST")
+            .unwrap_or("127.0.0.1".to_string())
+            .parse::<IpAddr>()
+            .unwrap(),
+        env::var("PORT")
+            .unwrap_or("3000".to_string())
+            .parse::<u16>()
+            .unwrap(),
+    ));
+    let server = TcpListener::bind(&addr).await.unwrap();
 
-    axum::serve(tcp, router).await.unwrap();
+    // serve axum
+    println!("REST server is running on http://{}", addr);
+    axum::serve(server, router).await.unwrap();
 }

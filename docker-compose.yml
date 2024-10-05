@@ -1,0 +1,40 @@
+services:
+  ifcloud-storage:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ifcloud-storage
+    container_name: ifcloud-storage
+    ports:
+      - "3000:3000"
+      - "3001:3001"
+    env_file:
+      - .env
+    restart: unless-stopped
+    networks:
+      - ifcloud-network
+    depends_on:
+      - token
+      - session
+
+  token:
+    container_name: token
+    image: redis:alpine
+    restart: unless-stopped
+    ports:
+      - "6666:6379"
+    networks:
+      - ifcloud-network
+
+  session:
+    container_name: session
+    image: redis:alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    networks:
+      - ifcloud-network
+
+networks:
+  ifcloud-network:
+    name: ifcloud-network

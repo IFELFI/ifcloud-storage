@@ -2,7 +2,7 @@ use axum::{body::Body, http::StatusCode, response::IntoResponse};
 use serde::{Deserialize, Serialize};
 
 pub mod file;
-pub mod issue;
+pub mod session;
 
 trait BodyBuilder {
     fn build_body(&self) -> Body;
