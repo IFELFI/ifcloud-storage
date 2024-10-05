@@ -22,18 +22,20 @@ impl StorageManage for StorageManageService {
         &self,
         request: Request<MergeRequest>,
     ) -> Result<Response<StorageManageReply>, Status> {
-        println!("request: {:?}", request);
-
         let request = request.into_inner();
         let file_key = request.file_key;
         let total_chunk_count = request.total_chunk_count;
 
-        ManageFileService::merge_chunks(&file_key, total_chunk_count)
-            .await
-            .unwrap();
-        let reply = storage_manager::StorageManageReply {
-            message: "File merged successfully".to_string(),
+        let mut reply = storage_manager::StorageManageReply {
+            message: "File merging failed".to_string(),
         };
+
+        let result = ManageFileService::merge_chunks(&file_key, total_chunk_count).await;
+
+        match result {
+            Ok(_) => reply.message = "File merged successfully".to_string(),
+            Err(e) => reply.message = format!("File merging failed: {}", e),
+        }
 
         Ok(Response::new(reply))
     }
@@ -42,14 +44,18 @@ impl StorageManage for StorageManageService {
         &self,
         request: Request<DeleteRequest>,
     ) -> Result<Response<StorageManageReply>, Status> {
-        println!("Got a request from {:?}", request.remote_addr());
-
         let file_key = &request.get_ref().file_key;
 
-        ManageFileService::delete_file(file_key).await.unwrap();
-        let reply = storage_manager::StorageManageReply {
-            message: "File deleted successfully".to_string(),
+        let mut reply = storage_manager::StorageManageReply {
+            message: "File deletion failed".to_string(),
         };
+
+        let result = ManageFileService::delete_file(file_key).await;
+
+        match result {
+            Ok(_) => reply.message = "File deleted successfully".to_string(),
+            Err(e) => reply.message = format!("File deletion failed: {}", e),
+        }
 
         Ok(Response::new(reply))
     }
