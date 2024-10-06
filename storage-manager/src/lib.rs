@@ -27,13 +27,17 @@ impl StorageManage for StorageManageService {
         let total_chunk_count = request.total_chunk_count;
 
         let mut reply = storage_manager::StorageManageReply {
+            success: false,
             message: "File merging failed".to_string(),
         };
 
         let result = ManageFileService::merge_chunks(&file_key, total_chunk_count).await;
 
         match result {
-            Ok(_) => reply.message = "File merged successfully".to_string(),
+            Ok(_) => {
+                reply.success = true;
+                reply.message = "File merged successfully".to_string();
+            },
             Err(e) => reply.message = format!("File merging failed: {}", e),
         }
 
@@ -47,13 +51,17 @@ impl StorageManage for StorageManageService {
         let file_key = &request.get_ref().file_key;
 
         let mut reply = storage_manager::StorageManageReply {
+            success: false,
             message: "File deletion failed".to_string(),
         };
 
         let result = ManageFileService::delete_file(file_key).await;
 
         match result {
-            Ok(_) => reply.message = "File deleted successfully".to_string(),
+            Ok(_) => {
+                reply.success = true;
+                reply.message = "File deleted successfully".to_string();
+            },
             Err(e) => reply.message = format!("File deletion failed: {}", e),
         }
 
