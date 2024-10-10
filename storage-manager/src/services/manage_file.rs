@@ -34,9 +34,11 @@ impl ManageFileService {
         // Chunked file path
         let chunk_dir_path = format!("{}/chunks/{}", storage_path, file_key);
         // Original file path
-        let original_file_path = format!("{}/{}/{}", storage_path, file_key, original_file_name);
+        let original_dir_path = format!("{}/{}", storage_path, file_key);
+        let original_file_path = format!("{}/{}", original_dir_path, original_file_name);
 
         // Read or create original file
+        tokio::fs::create_dir_all(original_dir_path).await?;
         let mut file = tokio::fs::OpenOptions::new()
             .create(true)
             .write(true)
