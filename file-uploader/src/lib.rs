@@ -1,4 +1,5 @@
 use axum::{
+    http::{HeaderValue, Method},
     routing::{get, post},
     Router,
 };
@@ -8,27 +9,54 @@ use std::{
     net::{IpAddr, SocketAddr},
 };
 use tokio::net::TcpListener;
+use tower_http::cors::CorsLayer;
 
 mod layers;
 mod routes;
 mod services;
 
-//#[tokio::main]
 pub async fn run() {
+    // *************
+    // Layers
+    // *************
+
+    // Cors layer
+    // Allowed origins
+    let allowed_origins = ["http://localhost:3005".parse().unwrap()];
+    let cors_layer = CorsLayer::new()
+        .allow_origin(allowed_origins)
+        .allow_methods([Method::GET, Method::POST])
+        .allow_credentials(true);
+
+    // Session layer
     let session_layer = layers::set_session_layer().await.unwrap();
 
+    // *************
+    // Routes
+    // *************
+
+    // Index routes
     let index_routes = Router::new().route("/", get(|| async { "Hello, world!" }));
 
+    // File manage routes
     let file_manage_routes = Router::new()
-        .route("/read", get(routes::file::read))
-        .route("/write", post(routes::file::write));
+        .route("/:file_key", get(routes::file::read))
+        .route("/:file_key", post(routes::file::write));
 
+    // Issue session routes
     let issue_session_routes = Router::new().route("/issue/:token", get(issue_session));
 
+    // *************
+    // Build server
+    // *************
+
+    // Router
     let router = Router::new()
         .nest("/", index_routes)
         .nest("/file", file_manage_routes)
         .nest("/session", issue_session_routes)
+        // cors for localhost:3005
+        .layer(cors_layer)
         .layer(session_layer);
 
     let addr = SocketAddr::from((
