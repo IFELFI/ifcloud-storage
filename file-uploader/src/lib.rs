@@ -1,9 +1,9 @@
 use axum::{
-    http::{HeaderValue, Method},
+    http::Method,
     routing::{get, post},
     Router,
 };
-use routes::session::issue_session;
+use routes::session::{delete_session, issue_session};
 use std::{
     env,
     net::{IpAddr, SocketAddr},
@@ -43,8 +43,10 @@ pub async fn run() {
         .route("/:file_key", get(routes::file::read))
         .route("/:file_key", post(routes::file::write));
 
-    // Issue session routes
-    let issue_session_routes = Router::new().route("/issue/:token", get(issue_session));
+    // Session routes
+    let session_routes = Router::new()
+        .route("/issue/:token", get(issue_session))
+        .route("/delete/:token", post(delete_session));
 
     // *************
     // Build server
@@ -54,7 +56,7 @@ pub async fn run() {
     let router = Router::new()
         .nest("/", index_routes)
         .nest("/file", file_manage_routes)
-        .nest("/session", issue_session_routes)
+        .nest("/session", session_routes)
         // cors for localhost:3005
         .layer(cors_layer)
         .layer(session_layer);

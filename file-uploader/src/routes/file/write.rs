@@ -18,10 +18,10 @@ pub async fn write(
     session: Session,
     mut multipart: Multipart,
 ) -> Result<Response<Body>, AppError> {
-    // check file_key is available
+    // Check file_key is available
     let is_available = SessionManager.is_available_key(&session, &file_key).await?;
 
-    // check file_key is available
+    // Check file_key is available
     if !is_available {
         let body = ResponseBody::new("file_key is not available".to_string()).build_body();
 
@@ -30,7 +30,7 @@ pub async fn write(
         return Ok(response);
     }
 
-    // load chunkCount and fileData from multipart
+    // Load chunkCount and fileData from multipart
     let mut chunk_count: u32 = 0;
     let mut file_data: Bytes = Bytes::new();
 
@@ -47,12 +47,15 @@ pub async fn write(
         }
     }
 
-    // create folder if not exist
+    // Create folder if not exist
     let storage_path = env::var("BASE_STORAGE_PATH").unwrap_or("./storage".to_string());
-    let dir_path = format!("{}/{}", &storage_path, &file_key);
-    tokio::fs::create_dir_all(&dir_path).await?;
-    // write fileData to file
+    // Chunk folder path
+    let dir_path = format!("{}/chunks/{}", &storage_path, &file_key);
+    // Chunk file path
     let file_path = format!("{}/{}", &dir_path, chunk_count);
+
+    // Write chunk file
+    tokio::fs::create_dir_all(&dir_path).await?;
     tokio::fs::write(file_path, file_data).await?;
 
     let body = ResponseBody::new("chunk upload success".to_string()).build_body();
