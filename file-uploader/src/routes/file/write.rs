@@ -4,6 +4,7 @@ use anyhow::Result;
 use axum::{
     body::{Body, Bytes},
     extract::{Multipart, Path},
+    http::StatusCode,
     response::Response,
 };
 use tower_sessions::Session;
@@ -19,15 +20,29 @@ pub async fn write(
     mut multipart: Multipart,
 ) -> Result<Response<Body>, AppError> {
     // Check file_key is available
-    let is_available = SessionManager.is_available_key(&session, &file_key).await?;
+    match SessionManager.is_available_key(&session, &file_key).await {
+        Ok(is_available) => {
+            if !is_available {
+                let body = ResponseBody::new("file_key is not available".to_string()).build_body();
 
-    // Check file_key is available
-    if !is_available {
-        let body = ResponseBody::new("file_key is not available".to_string()).build_body();
+                let response = Response::builder()
+                    .status(StatusCode::UNAUTHORIZED)
+                    .body(body)
+                    .unwrap();
 
-        let response = Response::builder().status(400).body(body).unwrap();
+                return Ok(response);
+            }
+        }
+        Err(err) => {
+            let body = ResponseBody::new(format!("session error: {}", err)).build_body();
 
-        return Ok(response);
+            let response = Response::builder()
+                .status(StatusCode::INTERNAL_SERVER_ERROR)
+                .body(body)
+                .unwrap();
+
+            return Ok(response);
+        }
     }
 
     // Load chunkCount and fileData from multipart
@@ -60,7 +75,10 @@ pub async fn write(
 
     let body = ResponseBody::new("chunk upload success".to_string()).build_body();
 
-    let response = Response::builder().status(200).body(body).unwrap();
+    let response = Response::builder()
+        .status(StatusCode::OK)
+        .body(body)
+        .unwrap();
 
     Ok(response)
 }

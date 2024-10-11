@@ -1,6 +1,6 @@
 use anyhow::Result;
 use async_trait::async_trait;
-use axum::{body::Body, extract::Path, response::Response};
+use axum::{body::Body, extract::Path, http::StatusCode, response::Response};
 use tower_sessions::Session;
 
 use crate::services::{
@@ -48,12 +48,37 @@ impl SessionManageService for SessionRoute {
         Path(token): Path<String>,
         session: &Session,
     ) -> Result<Response<Body>, AppError> {
-        let file_key = self.token_manager.get_file_key(&token).await?;
-        session.insert(&file_key, true).await?;
+        let file_key = match self.token_manager.get_file_key(&token).await {
+            Ok(file_key) => file_key,
+            Err(_) => {
+                let body = ResponseBody::new("token not found".to_string()).build_body();
+                
+                let response = Response::builder()
+                    .status(StatusCode::NOT_FOUND)
+                    .body(body)
+                    .unwrap();
+                
+                return Ok(response);
+            }
+        };
+
+        if let Err(err) = session.insert(&file_key, true).await {
+            let body = ResponseBody::new(format!("session error: {}", err)).build_body();
+
+            let response = Response::builder()
+                .status(StatusCode::INTERNAL_SERVER_ERROR)
+                .body(body)
+                .unwrap();
+
+            return Ok(response);
+        }
 
         let body = ResponseBody::new("session issued".to_string()).build_body();
 
-        let response = Response::builder().status(200).body(body).unwrap();
+        let response = Response::builder()
+            .status(StatusCode::OK)
+            .body(body)
+            .unwrap();
 
         Ok(response)
     }
@@ -63,12 +88,27 @@ impl SessionManageService for SessionRoute {
         Path(token): Path<String>,
         session: &Session,
     ) -> Result<Response<Body>, AppError> {
-        let file_key = self.token_manager.get_file_key(&token).await?;
+        let file_key = match self.token_manager.get_file_key(&token).await {
+            Ok(file_key) => file_key,
+            Err(_) => {
+                let body = ResponseBody::new("token not found".to_string()).build_body();
+
+                let response = Response::builder()
+                    .status(StatusCode::NOT_FOUND)
+                    .body(body)
+                    .unwrap();
+
+                return Ok(response);
+            }
+        };
         self.session_manager.reset(&session, file_key).await?;
 
         let body = ResponseBody::new("deleted file key from session".to_string()).build_body();
 
-        let response = Response::builder().status(200).body(body).unwrap();
+        let response = Response::builder()
+            .status(StatusCode::OK)
+            .body(body)
+            .unwrap();
 
         Ok(response)
     }
