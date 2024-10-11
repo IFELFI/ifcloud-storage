@@ -1,5 +1,11 @@
 use anyhow::Result;
-use axum::{body::Body, extract::Path, http::StatusCode, response::Response};
+use axum::{
+    body::Body,
+    extract::{Path, Query},
+    http::StatusCode,
+    response::Response,
+};
+use serde::Deserialize;
 use tokio_util::io::ReaderStream;
 use tower_sessions::Session;
 
@@ -11,10 +17,33 @@ use crate::{
     },
 };
 
+#[derive(Debug, Deserialize)]
+pub struct Params {
+    #[serde(default)]
+    file_name: Option<String>,
+}
+
 pub async fn read(
     Path(file_key): Path<String>,
+    Query(params): Query<Params>,
     session: Session,
 ) -> Result<Response<Body>, AppError> {
+    // Check file_name is given
+    let file_name = match params.file_name {
+        Some(file_name) => file_name,
+        None => {
+            let body = ResponseBody::new("file_name is required".to_string()).build_body();
+
+            let response = Response::builder()
+                .status(StatusCode::BAD_REQUEST)
+                .body(body)
+                .unwrap();
+
+            return Ok(response);
+        }
+    };
+
+    // Check file_key is available
     match SessionManager
         .is_available_key(&session, &file_key, ValidMethod::Read)
         .await
@@ -63,13 +92,14 @@ pub async fn read(
     let stream = ReaderStream::new(file);
 
     let body = Body::from_stream(stream);
+    let content_type = get_content_type(&file_name);
 
     let response = Response::builder()
         .status(StatusCode::OK)
-        .header("Content-Type", "application/octet-stream")
+        .header("Content-Type", content_type)
         .header(
             "Content-Disposition",
-            format!("attachment; filename=\"{}\"", file_key),
+            format!("attachment; filename=\"{}\"", file_name),
         )
         .header("Cache-Control", "no-cache")
         .header("Pragma", "no-cache")
@@ -77,4 +107,46 @@ pub async fn read(
         .unwrap();
 
     Ok(response)
+}
+
+fn get_content_type(file_name: &str) -> &str {
+    let ext = file_name.split('.').last().unwrap_or("none");
+
+    let file_type = match ext {
+        // Image
+        "jpg" | "jpeg" => "image/jpeg",
+        "png" => "image/png",
+        "gif" => "image/gif",
+        "bmp" => "image/bmp",
+        "webp" => "image/webp",
+        "svg" => "image/svg+xml",
+        // Application
+        "pdf" => "application/pdf",
+        "zip" => "application/zip",
+        "tar" => "application/x-tar",
+        "gz" => "application/gzip",
+        "7z" => "application/x-7z-compressed",
+        "rar" => "application/vnd.rar",
+        "json" => "application/json",
+        "xml" => "application/xml",
+        "csv" => "text/csv",
+        // Video
+        "mp4" => "video/mp4",
+        "webm" => "video/webm",
+        "ogg" => "video/ogg",
+        // Audio
+        "mp3" => "audio/mpeg",
+        "wav" => "audio/wav",
+        "flac" => "audio/flac",
+        // Text
+        "txt" => "text/plain",
+        "md" => "text/markdown",
+        "html" => "text/html",
+        "css" => "text/css",
+        "js" => "text/javascript",
+        // If none of them match, return "application/octet-stream"
+        _ => "application/octet-stream",
+    };
+
+    file_type
 }
