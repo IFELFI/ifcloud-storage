@@ -8,7 +8,7 @@ pub struct TokenManager {
 }
 
 pub trait TokenManagerService {
-    async fn get_file_key(&self, token: &str) -> RedisResult<String>;
+    async fn get_value(&self, token: &str) -> RedisResult<String>;
 }
 
 impl TokenManager {
@@ -25,7 +25,7 @@ impl TokenManager {
 }
 
 impl TokenManagerService for TokenManager {
-    async fn get_file_key(&self, token: &str) -> RedisResult<String> {
+    async fn get_value(&self, token: &str) -> RedisResult<String> {
         let mut con = self.connection.clone();
         let value: String = redis::cmd("GET").arg(&token).query_async(&mut con).await?;
         let _: () = redis::cmd("DEL").arg(&token).query_async(&mut con).await?;

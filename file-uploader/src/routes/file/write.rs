@@ -11,7 +11,7 @@ use tower_sessions::Session;
 
 use crate::{
     routes::{AppError, BodyBuilder, ResponseBody},
-    services::{session_manager::SessionManagerService, SessionManager},
+    services::{session_manager::{SessionManagerService, ValidMethod}, SessionManager},
 };
 
 pub async fn write(
@@ -20,7 +20,7 @@ pub async fn write(
     mut multipart: Multipart,
 ) -> Result<Response<Body>, AppError> {
     // Check file_key is available
-    match SessionManager.is_available_key(&session, &file_key).await {
+    match SessionManager.is_available_key(&session, &file_key, ValidMethod::Write).await {
         Ok(is_available) => {
             if !is_available {
                 let body = ResponseBody::new("file_key is not available".to_string()).build_body();

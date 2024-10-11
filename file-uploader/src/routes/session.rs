@@ -48,21 +48,38 @@ impl SessionManageService for SessionRoute {
         Path(token): Path<String>,
         session: &Session,
     ) -> Result<Response<Body>, AppError> {
-        let file_key = match self.token_manager.get_file_key(&token).await {
-            Ok(file_key) => file_key,
+        let value = match self.token_manager.get_value(&token).await {
+            Ok(result) => result,
             Err(_) => {
                 let body = ResponseBody::new("token not found".to_string()).build_body();
-                
+
                 let response = Response::builder()
                     .status(StatusCode::NOT_FOUND)
                     .body(body)
                     .unwrap();
-                
+
                 return Ok(response);
             }
         };
 
-        if let Err(err) = session.insert(&file_key, true).await {
+        // Check result prefix
+        match value.split(":").collect::<Vec<&str>>()[0] {
+            "read" => {}
+            "write" => {}
+            _ => {
+                let body = ResponseBody::new("invalid token".to_string()).build_body();
+
+                let response = Response::builder()
+                    .status(StatusCode::BAD_REQUEST)
+                    .body(body)
+                    .unwrap();
+
+                return Ok(response);
+            }
+        };
+
+        // Insert session
+        if let Err(err) = session.insert(&value, true).await {
             let body = ResponseBody::new(format!("session error: {}", err)).build_body();
 
             let response = Response::builder()
@@ -73,6 +90,7 @@ impl SessionManageService for SessionRoute {
             return Ok(response);
         }
 
+        // Response
         let body = ResponseBody::new("session issued".to_string()).build_body();
 
         let response = Response::builder()
@@ -88,7 +106,7 @@ impl SessionManageService for SessionRoute {
         Path(token): Path<String>,
         session: &Session,
     ) -> Result<Response<Body>, AppError> {
-        let file_key = match self.token_manager.get_file_key(&token).await {
+        let value = match self.token_manager.get_value(&token).await {
             Ok(file_key) => file_key,
             Err(_) => {
                 let body = ResponseBody::new("token not found".to_string()).build_body();
@@ -101,7 +119,7 @@ impl SessionManageService for SessionRoute {
                 return Ok(response);
             }
         };
-        self.session_manager.reset(&session, file_key).await?;
+        self.session_manager.reset(&session, value).await?;
 
         let body = ResponseBody::new("deleted file key from session".to_string()).build_body();
 

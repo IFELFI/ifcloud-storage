@@ -1,23 +1,24 @@
 use anyhow::Result;
-use axum::{
-    body::Body,
-    extract::Path,
-    http::StatusCode,
-    response::Response,
-};
+use axum::{body::Body, extract::Path, http::StatusCode, response::Response};
 use tokio_util::io::ReaderStream;
 use tower_sessions::Session;
 
 use crate::{
     routes::{AppError, BodyBuilder, ResponseBody},
-    services::{session_manager::SessionManagerService, SessionManager},
+    services::{
+        session_manager::{SessionManagerService, ValidMethod},
+        SessionManager,
+    },
 };
 
 pub async fn read(
     Path(file_key): Path<String>,
     session: Session,
 ) -> Result<Response<Body>, AppError> {
-    match SessionManager.is_available_key(&session, &file_key).await {
+    match SessionManager
+        .is_available_key(&session, &file_key, ValidMethod::Read)
+        .await
+    {
         Ok(is_available) => {
             if !is_available {
                 let body = ResponseBody::new("file_key is not available".to_string()).build_body();
@@ -66,7 +67,10 @@ pub async fn read(
     let response = Response::builder()
         .status(StatusCode::OK)
         .header("Content-Type", "application/octet-stream")
-        .header("Content-Disposition", format!("attachment; filename=\"{}\"", file_key))
+        .header(
+            "Content-Disposition",
+            format!("attachment; filename=\"{}\"", file_key),
+        )
         .header("Cache-Control", "no-cache")
         .header("Pragma", "no-cache")
         .body(body)
