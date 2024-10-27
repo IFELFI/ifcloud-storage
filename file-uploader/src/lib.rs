@@ -22,7 +22,7 @@ pub async fn run() {
 
     // Cors layer
     // Allowed origins
-    let allowed_origins = ["http://localhost:3005".parse().unwrap()];
+    let allowed_origins = [env::var("ALLOWED_ORIGIN").unwrap().parse().unwrap()];
     let cors_layer = CorsLayer::new()
         .allow_origin(allowed_origins)
         .allow_methods([Method::GET, Method::POST])
