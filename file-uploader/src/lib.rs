@@ -1,17 +1,20 @@
 use axum::{
     http::Method,
+    middleware,
     routing::{get, post},
     Router,
 };
+use middlewares::auth_session;
 use routes::session::{delete_session, issue_session};
 use std::{
     env,
     net::{IpAddr, SocketAddr},
 };
 use tokio::net::TcpListener;
-use tower_http::cors::CorsLayer;
+use tower_http::{cors::CorsLayer, services::ServeDir};
 
 mod layers;
+mod middlewares;
 mod routes;
 mod services;
 
@@ -40,8 +43,12 @@ pub async fn run() {
 
     // File manage routes
     let file_manage_routes = Router::new()
-        .route("/:file_key", get(routes::file::read))
+        //.route("/:file_key", get(routes::file::read))
         .route("/:file_key", post(routes::file::write));
+    //
+    let file_read_routes = Router::new()
+        .nest_service("/", ServeDir::new("storage"))
+        .layer(middleware::from_fn(auth_session));
 
     // Session routes
     let session_routes = Router::new()
@@ -55,9 +62,9 @@ pub async fn run() {
     // Router
     let router = Router::new()
         .nest("/", index_routes)
-        .nest("/file", file_manage_routes)
+        .nest("/write", file_manage_routes)
+        .nest("/read", file_read_routes)
         .nest("/session", session_routes)
-        // cors for localhost:3005
         .layer(cors_layer)
         .layer(session_layer);
 
