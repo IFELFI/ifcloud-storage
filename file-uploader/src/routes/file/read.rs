@@ -2,7 +2,7 @@ use anyhow::Result;
 use axum::{
     body::Body,
     extract::{Path, Query},
-    http::StatusCode,
+    http::{header, StatusCode},
     response::Response,
 };
 use serde::Deserialize;
@@ -52,16 +52,16 @@ pub async fn read(
             return Ok(response);
         }
     };
-    let stream = ReaderStream::new(file);
 
+    let stream = ReaderStream::new(file);
     let body = Body::from_stream(stream);
     let content_type = get_content_type(&file_name);
 
     let response = Response::builder()
         .status(StatusCode::OK)
-        .header("Content-Type", content_type)
+        .header(header::CONTENT_TYPE, content_type)
         .header(
-            "Content-Disposition",
+            header::CONTENT_DISPOSITION,
             format!("attachment; filename=\"{}\"", file_name),
         )
         .header("Cache-Control", "no-cache")
