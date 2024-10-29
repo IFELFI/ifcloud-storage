@@ -8,7 +8,7 @@ use crate::services::{
     SessionManager,
 };
 
-const PATH_FORM: &str = "/:file_key/:file_name";
+const PATH_FORM: &str = "/:route_name/:file_key/:file_name";
 
 pub async fn auth_session(request: Request, next: Next) -> Result<Response, StatusCode> {
     let session = request.extensions().get::<Session>().unwrap().clone();
@@ -40,7 +40,7 @@ pub async fn parse_path<'a>(path: &'a str, path_form: &'a str) -> HashMap<&'a st
 
     let mut path_params = HashMap::new();
     for (i, form) in path_form.iter().enumerate() {
-        if form.starts_with(":") {
+        if form.starts_with(":") && i < path.len() {
             path_params.insert(form.trim_start_matches(":"), path[i]);
         }
     }

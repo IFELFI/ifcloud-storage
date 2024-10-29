@@ -7,15 +7,8 @@ use axum::{
 };
 use serde::Deserialize;
 use tokio_util::io::ReaderStream;
-use tower_sessions::Session;
 
-use crate::{
-    routes::{AppError, BodyBuilder, ResponseBody},
-    services::{
-        session_manager::{SessionManagerService, ValidMethod},
-        SessionManager,
-    },
-};
+use crate::routes::{AppError, BodyBuilder, ResponseBody};
 
 #[derive(Debug, Deserialize)]
 pub struct Params {
@@ -26,7 +19,6 @@ pub struct Params {
 pub async fn read(
     Path(file_key): Path<String>,
     Query(params): Query<Params>,
-    session: Session,
 ) -> Result<Response<Body>, AppError> {
     // Check file_name is given
     let file_name = match params.file_name {
@@ -36,35 +28,6 @@ pub async fn read(
 
             let response = Response::builder()
                 .status(StatusCode::BAD_REQUEST)
-                .body(body)
-                .unwrap();
-
-            return Ok(response);
-        }
-    };
-
-    // Check file_key is available
-    match SessionManager
-        .is_available_key(&session, &file_key, ValidMethod::Read)
-        .await
-    {
-        Ok(is_available) => {
-            if !is_available {
-                let body = ResponseBody::new("file_key is not available".to_string()).build_body();
-
-                let response = Response::builder()
-                    .status(StatusCode::UNAUTHORIZED)
-                    .body(body)
-                    .unwrap();
-
-                return Ok(response);
-            }
-        }
-        Err(err) => {
-            let body = ResponseBody::new(format!("session error: {}", err)).build_body();
-
-            let response = Response::builder()
-                .status(StatusCode::INTERNAL_SERVER_ERROR)
                 .body(body)
                 .unwrap();
 
