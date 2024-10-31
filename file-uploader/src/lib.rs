@@ -47,7 +47,7 @@ pub async fn run() {
         .route("/:file_key", post(routes::file::write));
     //
     let file_read_routes = Router::new()
-        .route("/with_name/:file_key", get(routes::file::read))
+        .route("/with-name/:file_key", get(routes::file::read))
         .nest_service("/bare", ServeDir::new("storage"))
         .layer(middleware::from_fn(auth_session));
 
