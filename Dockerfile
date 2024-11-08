@@ -19,7 +19,6 @@ RUN addgroup -S myuser \
   && adduser -S myuser -G myuser \
   && apk add protoc protobuf-dev 
 COPY --from=builder /app/target/x86_64-unknown-linux-musl/release/runner \
-  /app/.env \
   /usr/local/bin/
 
 USER myuser
