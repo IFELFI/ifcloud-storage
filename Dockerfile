@@ -23,10 +23,4 @@ COPY --from=builder /app/target/x86_64-unknown-linux-musl/release/runner \
 
 USER myuser
 
-EXPOSE 3000
-EXPOSE 3001
-
-ENV PORT=3000
-ENV RPC_PORT=3001
-
 CMD ["/usr/local/bin/runner"]
