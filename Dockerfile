@@ -1,5 +1,4 @@
 FROM clux/muslrust:stable AS chef
-USER root
 RUN cargo install cargo-chef
 WORKDIR /app
 
@@ -15,12 +14,8 @@ COPY . .
 RUN cargo build --release --target x86_64-unknown-linux-musl
 
 FROM alpine AS runtime
-RUN addgroup -S myuser \
-  && adduser -S myuser -G myuser \
-  && apk add protoc protobuf-dev 
+RUN apk add protoc protobuf-dev 
 COPY --from=builder /app/target/x86_64-unknown-linux-musl/release/runner \
   /usr/local/bin/
-
-USER myuser
 
 CMD ["/usr/local/bin/runner"]
