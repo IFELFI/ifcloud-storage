@@ -1,26 +1,21 @@
-FROM clux/muslrust:stable AS chef
-USER root
-RUN cargo install cargo-chef
+# Build the application
+FROM clux/muslrust:stable AS builder
+# Set the working directory
 WORKDIR /app
-
-FROM chef AS planner
+# Copy the source code into the container
 COPY . .
-RUN cargo chef prepare --recipe-path recipe.json
 
-FROM chef AS builder
-COPY --from=planner /app/recipe.json recipe.json
-# Notice that we are specifying the --target flag!
-RUN cargo chef cook --release --target x86_64-unknown-linux-musl --recipe-path recipe.json
-COPY . .
+# Build the application
 RUN cargo build --release --target x86_64-unknown-linux-musl
 
-FROM alpine AS runtime
-RUN addgroup -S myuser \
-  && adduser -S myuser -G myuser \
-  && apk add protoc protobuf-dev 
+# Create runtime image
+FROM alpine:latest AS runtime
+# Set the working directory
+WORKDIR /app
+# Install the protobuf compiler
+RUN apk add protoc protobuf-dev
+# Copy the built application into the container
 COPY --from=builder /app/target/x86_64-unknown-linux-musl/release/runner \
-  /app/.env \
-  /usr/local/bin/
+  ./bin/runner
 
-USER myuser
-CMD ["/usr/local/bin/runner"]
+CMD ["./bin/runner"]
